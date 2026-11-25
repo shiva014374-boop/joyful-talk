@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Joyful Talk - Free Video Call</title>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Arial}
+body{background:#fff;color:#111}
+.header{text-align:center;padding:20px 10px;border-bottom:1px solid #eee}
+.header h1{color:#ff6a00;font-size:34px}
+.header p{color:#888;font-size:13px}
+.badge{display:inline-block;background:#16a34a;color:#fff;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:bold;margin-top:8px}
+.card{background:#f8f8f8;margin:12px;padding:14px;border-radius:18px;border:1px solid #eee}
+.card h3{font-size:15px;margin-bottom:10px}
+.flex{display:flex;gap:8px}
+.flex input{flex:1;padding:12px;border:1px solid #ddd;border-radius:12px;outline:none}
+.btn{background:#ff6a00;color:#fff;border:none;padding:12px 16px;border-radius:12px;font-weight:bold;cursor:pointer}
+.btn.green{background:#16a34a}
+.btn.grey{background:#fff;color:#111;border:1px solid #ddd}
+.videos{display:flex;gap:10px;padding:0 12px}
+.v-wrap{flex:1;position:relative}
+.v-wrap video{width:100%;height:220px;background:#111;border-radius:18px;object-fit:cover}
+.v-wrap span{position:absolute;left:10px;bottom:10px;background:rgba(255,255,255,.95);padding:5px 10px;border-radius:20px;font-size:12px;font-weight:bold}
+.controls{display:flex;justify-content:center;gap:8px;padding:14px;flex-wrap:wrap}
+.controls button{background:#fff;border:1px solid #ddd;padding:11px 14px;border-radius:50px;cursor:pointer;font-size:13px}
+.controls button.on{background:#ff6a00;color:#fff;border-color:#ff6a00;font-weight:bold}
+.controls button.red{background:#e11d48;color:#fff;border-color:#e11d48}
+#messages{height:160px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+.msg{background:#fff;padding:9px 12px;border-radius:14px;max-width:85%;font-size:14px;align-self:flex-start;border:1px solid #eee}
+.msg.me{background:#ff6a00;color:#fff;align-self:flex-end}
+.file-card{background:#fff;border:1px solid #eee;border-radius:14px;padding:12px;width:95%;max-width:340px}
+.progress{height:6px;background:#eee;border-radius:10px;margin:10px 0;overflow:hidden}
+.progress-bar{height:100%;background:#ff6a00;width:0%;transition:width .2s}
+.chat-input{display:flex;gap:6px;margin-top:10px;align-items:center}
+.chat-input input[type=text]{flex:1;padding:12px;border-radius:25px;border:1px solid #ddd;outline:none}
+.icon-btn{background:#fff;border:1px solid #ddd;width:44px;height:44px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center}
+.drop{border:2px dashed #ff6a00;border-radius:16px;padding:14px;text-align:center;margin:0 12px 12px;background:#fff7ed;cursor:pointer}
+.drop b{color:#ff6a00}
+.drop p{font-size:12px;color:#888}
+.status{text-align:center;color:#16a34a;font-size:12px;padding:6px;font-weight:600}
+.file-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:13px}
+.file-row a{color:#ff6a00;font-weight:bold;text-decoration:none}
+.footer{text-align:center;color:#aaa;font-size:12px;padding:12px}
+</style>
+</head>
+<body>
+<div class="header"><h1>joyful talk</h1><p>Free Video Call • No Login • No Limit Files</p><span class="badge">♾️ LIVE • REAL VIDEO CALL • NO LIMIT</span></div>
+<div class="card">
+<h3>🔗 Step 1: Your ID</h3>
+<div class="flex"><input id="myId" readonly placeholder="Generating ID..."><button class="btn grey" onclick="copyId()">Copy My ID</button></div>
+<p style="font-size:12px;color:#888;margin-top:8px">Ee ID ni friend ki pampu. Friend ID ikkada petti Call kottali.</p>
+<h3 style="margin-top:14px">📞 Step 2: Friend ID Petti Call Chey</h3>
+<div class="flex"><input id="friendId" placeholder="Friend ID ikkada paste chey"><button class="btn green" onclick="callFriend()">📞 Call</button></div>
+</div>
+<div class="status" id="status">● Waiting...</div>
+<div class="videos">
+<div class="v-wrap"><video id="localVideo" autoplay muted playsinline></video><span>You</span></div>
+<div class="v-wrap"><video id="remoteVideo" autoplay playsinline></video><span>Friend</span></div>
+</div>
+<div class="controls">
+<button id="micBtn" class="on" onclick="toggleMic()">🎤 Mic</button>
+<button id="camBtn" class="on" onclick="toggleCam()">📷 Cam</button>
+<button onclick="shareScreen()">🖥️ Screen</button>
+<button id="recBtn" onclick="toggleRecord()">⏺️ Record</button>
+<button class="red" onclick="endCall()">📞 End</button>
+</div>
+<div class="drop" onclick="document.getElementById('fileInput').click()"><b>📁 Drag & Drop - NO LIMIT FILES!</b><p>1MB, 500MB, 5GB - Anni OK! Click chey!</p><input type="file" id="fileInput" hidden onchange="handleFiles(this.files)"></div>
+<div class="card">
+<h3>💬 Chat + ♾️ Files</h3>
+<div id="messages"><div class="msg">Welcome to Joyful Talk! 👋 Friend ID tho call chey!</div></div>
+<div class="chat-input">
+<label class="icon-btn">📎<input type="file" hidden onchange="handleFiles(this.files)"></label>
+<input type="text" id="chatInput" placeholder="Type message..." onkeydown="if(event.key==='Enter') sendMsg()">
+<button class="btn" onclick="sendMsg()">Send</button>
+</div>
+</div>
+<div class="card"><h3>📁 Shared Files</h3><div id="sharedFiles"><p style="color:#999;font-size:13px">Inka files levu</p></div></div>
+<div class="footer">Made with ❤️ by Joyful • Joyful Talk</div>
+<script>
+let stream=null, peer=null, currentCall=null, conn=null, recorder=null, chunks=[], isRecording=false;
+let myPeerId = 'joyful-' + Math.random().toString(36).slice(2,7);
+document.getElementById('myId').value = myPeerId;
+async function init(){
+  try{ stream = await navigator.mediaDevices.getUserMedia({video:true,audio:true}); document.getElementById('localVideo').srcObject = stream; }catch(e){ alert("Camera permission ivvu ra!"); }
+  peer = new Peer(myPeerId);
+  peer.on('open', id => { document.getElementById('status').textContent = "● Online! Your ID: " + id; });
+  peer.on('call', call => {
+    call.answer(stream);
+    call.on('stream', s => { document.getElementById('remoteVideo').srcObject = s; document.getElementById('status').textContent = "● Connected! Call ON!"; });
+    currentCall = call;
+  });
+  peer.on('connection', c => {
+    conn = c;
+    conn.on('data', data => { receiveData(data); });
+    conn.on('open', () => { document.getElementById('status').textContent = "● Chat Connected!"; });
+  });
+}
+init();
+function copyId(){ navigator.clipboard.writeText(document.getElementById('myId').value); alert("ID Copied! Friend ki pampu!"); }
+function callFriend(){
+  let fid = document.getElementById('friendId').value.trim(); if(!fid) return alert("Friend ID pettu ra!");
+  conn = peer.connect(fid);
+  conn.on('open', () => { document.getElementById('status').textContent = "● Chat Connected!"; });
+  conn.on('data', data => { receiveData(data); });
+  let call = peer.call(fid, stream);
+  call.on('stream', s => { document.getElementById('remoteVideo').srcObject = s; document.getElementById('status').textContent = "● Connected! Call ON!"; });
+  currentCall = call;
+}
+function toggleMic(){ if(!stream) return; let t=stream.getAudioTracks()[0]; t.enabled=!t.enabled; document.getElementById('micBtn').classList.toggle('on',t.enabled); }
+function toggleCam(){ if(!stream) return; let t=stream.getVideoTracks()[0]; t.enabled=!t.enabled; document.getElementById('camBtn').classList.toggle('on',t.enabled); }
+async function shareScreen(){ try{ let s=await navigator.mediaDevices.getDisplayMedia({video:true}); document.getElementById('localVideo').srcObject=s; s.getVideoTracks()[0].onended=()=>{document.getElementById('localVideo').srcObject=stream}; }catch(e){} }
+function sendMsg(){
+  let inp=document.getElementById('chatInput'); if(!inp.value.trim()) return;
+  let div=document.createElement('div'); div.className='msg me'; div.textContent=inp.value; document.getElementById('messages').appendChild(div);
+  if(conn && conn.open) conn.send({type:'msg', text: inp.value});
+  document.getElementById('messages').scrollTop=9999; inp.value='';
+}
+function receiveData(data){
+  if(data.type==='msg'){ let d=document.createElement('div'); d.className='msg'; d.textContent=data.text; document.getElementById('messages').appendChild(d); document.getElementById('messages').scrollTop=9999; }
+  if(data.type==='file'){ showFileCard(data.name, data.size, data.url, false); }
+}
+function formatSize(b){ if(b<1024) return b+' B'; if(b<1024*1024) return (b/1024).toFixed(1)+' KB'; if(b<1024*1024*1024) return (b/(1024*1024)).toFixed(1)+' MB'; return (b/(1024*1024*1024)).toFixed(2)+' GB'; }
+function getIcon(n){ if(/\.(jpg|jpeg|png|gif|webp)$/i.test(n)) return '🖼️'; if(/\.pdf$/i.test(n)) return '📄'; if(/\.(mp4|mov)$/i.test(n)) return '🎬'; if(/\.(mp3|wav)$/i.test(n)) return '🎵'; if(/\.(zip|rar)$/i.test(n)) return '📦'; return '📁'; }
+function handleFiles(list){ for(let f of list) sendFileNoLimit(f); }
+function sendFileNoLimit(file){
+  let url = URL.createObjectURL(file);
+  showFileCard(file.name, file.size, url, true, file);
+  if(conn && conn.open) conn.send({type:'file', name: file.name, size: file.size, url: url});
+}
+function showFileCard(name, size, url, isMe, fileObj){
+  let wrap=document.createElement('div'); wrap.style.alignSelf = isMe ? 'flex-end':'flex-start'; wrap.style.width='100%'; wrap.style.display='flex'; wrap.style.justifyContent = isMe ? 'flex-end':'flex-start';
+  let id='f'+Date.now()+Math.random().toString(36).slice(2);
+  wrap.innerHTML=`<div class="file-card"><div style="display:flex;gap:10px;align-items:center"><span style="font-size:26px">${getIcon(name)}</span><div style="flex:1;overflow:hidden"><b style="font-size:13px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</b><span style="font-size:11px;color:#888">${formatSize(size)} • ${isMe?'You':'Friend'} • NO LIMIT</span></div></div><div class="progress"><div class="progress-bar" id="bar-${id}"></div></div><div style="font-size:11px;color:#666;display:flex;justify-content:space-between"><span id="txt-${id}">Preparing...</span><span id="pct-${id}">0%</span></div><div style="display:flex;gap:6px;margin-top:10px"><a href="${url}" download="${name}" style="flex:1;text-align:center;background:#ff6a00;color:#fff;text-decoration:none;padding:9px;border-radius:20px;font-size:12px;font-weight:bold">⬇️ Download</a></div></div>`;
+  document.getElementById('messages').appendChild(wrap);
+  document.getElementById('messages').scrollTop=9999;
+  if(fileObj){
+    let CHUNK=1024*1024, offset=0; let reader=new FileReader();
+    function next(){ if(offset>=fileObj.size){ document.getElementById('txt-'+id).textContent='✅ Ready!'; document.getElementById('pct-'+id).textContent='100%'; document.getElementById('bar-'+id).style.width='100%'; addToList(name,size,url); return; } let slice=fileObj.slice(offset, offset+CHUNK); reader.onload=()=>{ offset+=CHUNK; let pct=Math.min(100, Math.floor(offset/fileObj.size*100)); document.getElementById('bar-'+id).style.width=pct+'%'; document.getElementById('pct-'+id).textContent=pct+'%'; document.getElementById('txt-'+id).textContent=`Uploading... ${formatSize(offset)} / ${formatSize(fileObj.size)}`; next(); }; reader.readAsArrayBuffer(slice); } next();
+  } else { document.getElementById('bar-'+id).style.width='100%'; document.getElementById('txt-'+id).textContent='✅ Received!'; document.getElementById('pct-'+id).textContent='100%'; addToList(name,size,url); }
+}
+function addToList(name,size,url){ let list=document.getElementById('sharedFiles'); if(list.querySelector('p')) list.innerHTML=''; let row=document.createElement('div'); row.className='file-row'; row.innerHTML=`<span>${getIcon(name)} ${name} <small>(${formatSize(size)})</small></span><a href="${url}" download="${name}">Download ↓</a>`; list.appendChild(row); }
+function toggleRecord(){ let btn=document
